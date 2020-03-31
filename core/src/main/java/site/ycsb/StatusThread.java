@@ -25,6 +25,11 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.ByteBuffer;
+
 /**
  * A thread to periodically show the status of the experiment to reassure you that progress is being made.
  */
@@ -131,6 +136,22 @@ public class StatusThread extends Thread {
     computeStats(startTimeMs, startIntervalMs, System.currentTimeMillis(), lastTotalOps);
   }
 
+  private static void writeThroughput(double throughput) {
+    try {
+      RandomAccessFile file = new RandomAccessFile("/tmp/ycsb", "rw");
+      FileChannel fileChannel = file.getChannel();
+      FileLock lock = fileChannel.lock();
+      String output = String.format("%d ", (long)throughput);
+      byte[] outputBytes = output.getBytes();
+      ByteBuffer buffer = ByteBuffer.wrap(outputBytes);
+      fileChannel.write(buffer);
+      lock.release();
+      fileChannel.close();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
   /**
    * Computes and prints the stats.
    *
@@ -173,6 +194,8 @@ public class StatusThread extends Thread {
     if (todoops != 0) {
       msg.append("est completion in ").append(RemainingFormatter.format(estremaining));
     }
+
+    writeThroughput(curthroughput);
 
     msg.append(Measurements.getMeasurements().getSummary());
 
