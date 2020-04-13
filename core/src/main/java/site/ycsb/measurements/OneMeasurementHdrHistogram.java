@@ -23,6 +23,11 @@ import org.HdrHistogram.HistogramIterationValue;
 import org.HdrHistogram.HistogramLogWriter;
 import org.HdrHistogram.Recorder;
 
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.ByteBuffer;
+
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -140,6 +145,22 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
     }
   }
 
+  private static void writeLatency(double latency) {
+    try {
+      RandomAccessFile file = new RandomAccessFile("/tmp/ycsb_latency", "rw");
+      FileChannel fileChannel = file.getChannel();
+      FileLock lock = fileChannel.lock();
+      String output = String.format("%d ", (long)latency);
+      byte[] outputBytes = output.getBytes();
+      ByteBuffer buffer = ByteBuffer.wrap(outputBytes);
+      fileChannel.write(buffer);
+      lock.release();
+      fileChannel.close();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
   /**
    * This is called periodically from the StatusThread. There's a single
    * StatusThread per Client process. We optionally serialize the interval to
@@ -154,6 +175,8 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
     if (histogramLogWriter != null) {
       histogramLogWriter.outputIntervalHistogram(intervalHistogram);
     }
+
+    writeLatency(1.0 / intervalHistogram.getMean() * 1000000);
 
     DecimalFormat d = new DecimalFormat("#.##");
     return "[" + getName() + ": Count=" + intervalHistogram.getTotalCount() + ", Max="
