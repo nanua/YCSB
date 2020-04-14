@@ -145,7 +145,6 @@ public class StatusThread extends Thread {
       byte[] outputBytes = output.getBytes();
       ByteBuffer buffer = ByteBuffer.wrap(outputBytes);
       fileChannel.write(buffer);
-      lock.release();
       fileChannel.close();
     } catch (Exception e) {
       e.printStackTrace();

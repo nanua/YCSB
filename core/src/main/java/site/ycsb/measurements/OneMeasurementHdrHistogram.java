@@ -154,7 +154,6 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
       byte[] outputBytes = output.getBytes();
       ByteBuffer buffer = ByteBuffer.wrap(outputBytes);
       fileChannel.write(buffer);
-      lock.release();
       fileChannel.close();
     } catch (Exception e) {
       e.printStackTrace();
@@ -175,8 +174,10 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
     if (histogramLogWriter != null) {
       histogramLogWriter.outputIntervalHistogram(intervalHistogram);
     }
-
-    writeLatency(1.0 / intervalHistogram.getMean() * 1000000);
+    
+    if (getName().equals("READ")) {
+      writeLatency((long)(1000000.0 / intervalHistogram.getMean()));
+    }
 
     DecimalFormat d = new DecimalFormat("#.##");
     return "[" + getName() + ": Count=" + intervalHistogram.getTotalCount() + ", Max="

@@ -88,7 +88,7 @@ zipfian constant
     if (zipfianconstant == USED_ZIPFIAN_CONSTANT) {
       gen = new ZipfianGenerator(0, ITEM_COUNT, zipfianconstant, ZETAN);
     } else {
-      gen = new ZipfianGenerator(0, ITEM_COUNT, zipfianconstant);
+      gen = new ZipfianGenerator(0, itemcount, zipfianconstant);
     }
   }
 
