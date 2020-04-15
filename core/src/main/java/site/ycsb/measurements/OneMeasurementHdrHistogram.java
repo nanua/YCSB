@@ -150,7 +150,7 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
       RandomAccessFile file = new RandomAccessFile("/tmp/ycsb_latency", "rw");
       FileChannel fileChannel = file.getChannel();
       FileLock lock = fileChannel.lock();
-      String output = String.format("%d ", (long)latency);
+      String output = String.format("%f ", latency);
       byte[] outputBytes = output.getBytes();
       ByteBuffer buffer = ByteBuffer.wrap(outputBytes);
       fileChannel.write(buffer);
@@ -176,7 +176,7 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
     }
     
     if (getName().equals("READ")) {
-      writeLatency((long)(1000000.0 / intervalHistogram.getMean()));
+      writeLatency(intervalHistogram.getMean());
     }
 
     DecimalFormat d = new DecimalFormat("#.##");
