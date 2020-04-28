@@ -17,6 +17,7 @@
 
 package site.ycsb;
 
+import java.net.SocketAddress;
 import java.util.Map;
 import site.ycsb.measurements.Measurements;
 import org.apache.htrace.core.TraceScope;
@@ -49,6 +50,13 @@ public class DBWrapper extends DB {
   private final String scopeStringScan;
   private final String scopeStringUpdate;
 
+  private final String scopeStringCacheGet;
+  private final String scopeStringCacheSet;
+  private final String scopeStringCacheDelete;
+  private final String scopeStringCacheAdd;
+  private final String scopeStringCacheIncrease;
+  private final String scopeStringCacheStat;
+
   public DBWrapper(final DB db, final Tracer tracer) {
     this.db = db;
     measurements = Measurements.getMeasurements();
@@ -61,6 +69,13 @@ public class DBWrapper extends DB {
     scopeStringRead = simple + "#read";
     scopeStringScan = simple + "#scan";
     scopeStringUpdate = simple + "#update";
+
+    scopeStringCacheGet = simple + "#cacheGet";
+    scopeStringCacheSet = simple + "#cacheSet";
+    scopeStringCacheDelete = simple + "#cacheDelete";
+    scopeStringCacheAdd = simple + "#cacheAdd";
+    scopeStringCacheIncrease = simple + "#cacheIncrease";
+    scopeStringCacheStat = simple + "#cacheStat";
   }
 
   /**
@@ -242,6 +257,78 @@ public class DBWrapper extends DB {
       measure("DELETE", res, ist, st, en);
       measurements.reportStatus("DELETE", res);
       return res;
+    }
+  }
+
+  public String cacheGet(String key) {
+    try (final TraceScope span = tracer.newScope(scopeStringCacheGet)) {
+      long ist = measurements.getIntendedtartTimeNs();
+      long st = System.nanoTime();
+      String value = db.cacheGet(key);
+      long en = System.nanoTime();
+      measure("CACHE_GET", (value != null) ? Status.OK : Status.ERROR, ist, st, en);
+      measurements.reportStatus("CACHE_GET", (value != null) ? Status.OK : Status.ERROR);
+      return value;
+    }
+  }
+
+  public Status cacheSet(String key, String value) {
+    try (final TraceScope span = tracer.newScope(scopeStringCacheSet)) {
+      long ist = measurements.getIntendedtartTimeNs();
+      long st = System.nanoTime();
+      Status res = db.cacheSet(key, value);
+      long en = System.nanoTime();
+      measure("CACHE_SET", res, ist, st, en);
+      measurements.reportStatus("CACHE_SET", res);
+      return res;
+    }
+  }
+
+  public Status cacheDelete(String key) {
+    try (final TraceScope span = tracer.newScope(scopeStringCacheDelete)) {
+      long ist = measurements.getIntendedtartTimeNs();
+      long st = System.nanoTime();
+      Status res = db.cacheDelete(key);
+      long en = System.nanoTime();
+      measure("CACHE_DELETE", res, ist, st, en);
+      measurements.reportStatus("CACHE_DELETE", res);
+      return res;
+    }
+  }
+
+  public Status cacheAdd(String key, String value) {
+    try (final TraceScope span = tracer.newScope(scopeStringCacheAdd)) {
+      long ist = measurements.getIntendedtartTimeNs();
+      long st = System.nanoTime();
+      Status res = db.cacheAdd(key, value);
+      long en = System.nanoTime();
+      measure("CACHE_ADD", res, ist, st, en);
+      measurements.reportStatus("CACHE_ADD", res);
+      return res;
+    }
+  }
+
+  public Status cacheIncrease(String key, int by) {
+    try (final TraceScope span = tracer.newScope(scopeStringCacheIncrease)) {
+      long ist = measurements.getIntendedtartTimeNs();
+      long st = System.nanoTime();
+      Status res = db.cacheIncrease(key, by);
+      long en = System.nanoTime();
+      measure("CACHE_INCREASE", res, ist, st, en);
+      measurements.reportStatus("CACHE_INCREASE", res);
+      return res;
+    }
+  }
+
+  public Map<SocketAddress, Map<String, String>> cacheStat() {
+    try (final TraceScope span = tracer.newScope(scopeStringCacheStat)) {
+      long ist = measurements.getIntendedtartTimeNs();
+      long st = System.nanoTime();
+      Map<SocketAddress, Map<String, String>> result = db.cacheStat();
+      long en = System.nanoTime();
+      measure("CACHE_STAT", (result != null) ? Status.OK : Status.ERROR, ist, st, en);
+      measurements.reportStatus("CACHE_STAT", (result != null) ? Status.OK : Status.ERROR);
+      return result;
     }
   }
 }

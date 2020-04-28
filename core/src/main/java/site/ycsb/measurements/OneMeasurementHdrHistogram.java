@@ -175,7 +175,7 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
       histogramLogWriter.outputIntervalHistogram(intervalHistogram);
     }
     
-    if (getName().equals("READ")) {
+    if (getName().equals("CACHE_GET") || getName().equals("READ")) {
       writeLatency(intervalHistogram.getMean());
     }
 

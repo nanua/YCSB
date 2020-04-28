@@ -17,6 +17,7 @@
 
 package site.ycsb;
 
+import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -132,4 +133,28 @@ public abstract class DB {
    * @return The result of the operation.
    */
   public abstract Status delete(String table, String key);
+
+  public String cacheGet(String key) {
+    return null;
+  }
+
+  public Status cacheSet(String key, String value) {
+    return Status.OK;
+  }
+
+  public Status cacheDelete(String key) {
+    return Status.OK;
+  }
+
+  public Status cacheAdd(String key, String value) {
+    return Status.OK;
+  }
+
+  public Status cacheIncrease(String key, int by) {
+    return Status.OK;
+  }
+
+  public Map<SocketAddress, Map<String, String>> cacheStat() {
+    return null;
+  }
 }

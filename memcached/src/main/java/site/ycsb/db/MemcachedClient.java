@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -175,6 +176,67 @@ public class MemcachedClient extends DB {
     }
     return new net.spy.memcached.MemcachedClient(
         connectionFactoryBuilder.build(), addresses);
+  }
+
+  public String cacheGet(String key) {
+    try {
+      GetFuture<Object> future = memcachedClient().asyncGet(key);
+      Object document = future.get();
+      return (String)document;
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  public Status cacheSet(String key, String value) {
+    try {
+      OperationFuture<Boolean> future =
+          memcachedClient().set(key, objectExpirationTime, value);
+      return getReturnCode(future);
+    } catch (Exception e) {
+      logger.error("Error setting value", e);
+      return Status.ERROR;
+    }
+  }
+
+  public Status cacheDelete(String key) {
+    try {
+      OperationFuture<Boolean> future = memcachedClient().delete(key);
+      return getReturnCode(future);
+    } catch (Exception e) {
+      logger.error("Error deleting value", e);
+      return Status.ERROR;
+    }
+  }
+
+  public Status cacheAdd(String key, String value) {
+    try {
+      OperationFuture<Boolean> future =
+          memcachedClient().add(key, objectExpirationTime, value);
+      return getReturnCode(future);
+    } catch (Exception e) {
+      logger.error("Error adding value", e);
+      return Status.ERROR;
+    }
+  }
+
+  public Status cacheIncrease(String key, int by) {
+    try {
+      long newValue = memcachedClient().incr(key, by);
+      return (newValue != -1) ? Status.OK : Status.NOT_FOUND;
+    } catch (Exception e) {
+      logger.error("Error increasing value", e);
+      return Status.ERROR;
+    }
+  }
+
+  public Map<SocketAddress, Map<String, String>> cacheStat() {
+    try {
+      return memcachedClient().getStats();
+    } catch (Exception e) {
+      logger.error("Error getting stat", e);
+      return null;
+    }
   }
 
   @Override
