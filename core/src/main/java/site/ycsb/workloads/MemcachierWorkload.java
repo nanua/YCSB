@@ -38,6 +38,7 @@ public class MemcachierWorkload extends Workload implements Runnable {
   private final long prefetchSize = 4194304;
   private final long needPrefetchSize = prefetchSize / 2;
   private Thread prefetchThread;
+  private int acceleration;
 
   @Override
   public void init(Properties p) throws WorkloadException {
@@ -52,6 +53,7 @@ public class MemcachierWorkload extends Workload implements Runnable {
     }
     prefetchThread = new Thread(this);
     prefetchThread.start();
+    acceleration = Integer.parseInt(p.getProperty("acceleration", "1"));
   }
 
   @Override
@@ -81,7 +83,15 @@ public class MemcachierWorkload extends Workload implements Runnable {
 
       switch (transaction.type) {
       case GET:
-        db.cacheGet(keyString);
+        String result = db.cacheGet(keyString);
+        if (result == null && transaction.valueSize >= 0) {
+          value = ByteBuffer.allocate(transaction.valueSize).array();
+          valueString = new String(value);
+          db.cacheSet(keyString, valueString);
+        }
+        if (result != null && transaction.valueSize < 0) {
+          db.cacheDelete(keyString);
+        }
         break;
       case SET:
       case ADD:
@@ -117,7 +127,7 @@ public class MemcachierWorkload extends Workload implements Runnable {
               String[] params = line.split(",");
 
               MemcachierTransaction transaction = new MemcachierTransaction();
-              transaction.time = Float.parseFloat(params[0]);
+              transaction.time = Float.parseFloat(params[0]) / acceleration;
               transaction.keySize = (int)Math.min(Long.parseLong(params[3]), Integer.MAX_VALUE);
               transaction.valueSize = (int)Math.min(Long.parseLong(params[4]), Integer.MAX_VALUE);
               transaction.keyID = Long.parseLong(params[5]);
@@ -127,7 +137,7 @@ public class MemcachierWorkload extends Workload implements Runnable {
                 break;
               case 2:
                 transaction.type = MemcachierType.SET;
-                if (transaction.valueSize <= 0) {
+                if (transaction.valueSize < 0) {
                   continue;
                 }
                 break;
@@ -136,13 +146,13 @@ public class MemcachierWorkload extends Workload implements Runnable {
                 break;
               case 4:
                 transaction.type = MemcachierType.ADD;
-                if (transaction.valueSize <= 0) {
+                if (transaction.valueSize < 0) {
                   continue;
                 }
                 break;
               case 5:
                 transaction.type = MemcachierType.INCREMENT;
-                if (transaction.valueSize <= 0) {
+                if (transaction.valueSize < 0) {
                   continue;
                 }
                 break;
