@@ -166,6 +166,7 @@ public class MemcachierWorkload extends Workload implements Runnable {
             } else {
               return;
             }
+            Thread.sleep(0, 500);
           }
         }
         if (transactionList.size() > needPrefetchSize) {
