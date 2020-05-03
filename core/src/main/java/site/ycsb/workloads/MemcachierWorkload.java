@@ -4,13 +4,13 @@ import site.ycsb.*;
 
 import java.io.FileInputStream;
 import java.nio.ByteBuffer;
-import java.util.concurrent.*;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Dummy Java Doc.
  */
-public class MemcachierWorkload extends Workload implements Runnable {
+public class MemcachierWorkload extends Workload {
   private enum MemcachierType {
     GET,
     SET,
@@ -22,28 +22,21 @@ public class MemcachierWorkload extends Workload implements Runnable {
   }
 
   private static class MemcachierTransaction {
-    private float time;
+    private long time;
     private MemcachierType type;
-    private int keySize;
     private int valueSize;
     private long keyID;
   }
 
   private long startTime;
-  private LinkedBlockingQueue<MemcachierTransaction> transactionList;
 
   private FileInputStream inputStream;
   private Scanner scanner;
 
-  private final long prefetchSize = 4194304;
-  private final long needPrefetchSize = prefetchSize / 2;
-  private Thread prefetchThread;
   private int acceleration;
 
   @Override
   public void init(Properties p) throws WorkloadException {
-    startTime = System.nanoTime();
-    transactionList = new LinkedBlockingQueue<>();
     try {
       inputStream = new FileInputStream(p.getProperty("trace"));
       scanner = new Scanner(inputStream, "UTF-8");
@@ -51,131 +44,104 @@ public class MemcachierWorkload extends Workload implements Runnable {
       System.err.println("Failed to open the trace");
       e.printStackTrace();
     }
-    prefetchThread = new Thread(this);
-    prefetchThread.start();
     acceleration = Integer.parseInt(p.getProperty("acceleration", "1"));
+
+    startTime = System.nanoTime();
+  }
+
+  private synchronized String getLine() {
+    String line = null;
+    if (scanner.hasNextLine()) {
+      line = scanner.nextLine();
+    }
+    return line;
+  }
+
+  private MemcachierTransaction parseTransaction(String line) {
+    String[] params = line.split(",");
+
+    MemcachierTransaction transaction = new MemcachierTransaction();
+    transaction.time = (acceleration > 0) ? (long) (1000000000 * (Float.parseFloat(params[0]) / acceleration)) : 0;
+    transaction.valueSize = (int) Math.min(Long.parseLong(params[4]), Integer.MAX_VALUE);
+    transaction.keyID = Long.parseLong(params[5]);
+    switch (Integer.parseInt(params[2])) {
+    case 1:
+      transaction.type = MemcachierType.GET;
+      break;
+    case 2:
+      transaction.type = MemcachierType.SET;
+      if (transaction.valueSize < 0) {
+        transaction = null;
+      }
+      break;
+    case 3:
+      transaction.type = MemcachierType.DELETE;
+      break;
+    default:
+      transaction = null;
+      break;
+    }
+
+    return transaction;
+  }
+
+  private void executeTransaction(DB db, MemcachierTransaction transaction) {
+    String keyString = String.valueOf(transaction.keyID);
+
+    byte[] value;
+    String valueString;
+
+    switch (transaction.type) {
+    case GET:
+      db.cacheGet(keyString);
+      break;
+    case SET:
+      value = ByteBuffer.allocate(transaction.valueSize).array();
+      for (int i = 0; i < transaction.valueSize; ++i) {
+        value[i] = (byte)((int)(ThreadLocalRandom.current().nextFloat() * 91) + ' ');
+      }
+      valueString = new String(value);
+      db.cacheSet(keyString, valueString);
+      break;
+    default:
+      break;
+    }
   }
 
   @Override
   public boolean doInsert(DB db, Object threadstate) {
-    /* not implemented */
-    return false;
+    String line = getLine();
+    if (line == null) {
+      return false;
+    }
+    MemcachierTransaction transaction = parseTransaction(line);
+    if (transaction != null) {
+      executeTransaction(db, transaction);
+    }
+    return true;
   }
 
   @Override
   public boolean doTransaction(DB db, Object threadstate) {
     try {
-      MemcachierTransaction transaction = transactionList.poll(10, TimeUnit.SECONDS);
-      if (transaction == null) {
+      String line = getLine();
+      if (line == null) {
         return false;
       }
-
-      float curTime = ((float)(System.nanoTime() - startTime)) / 1000000000;
-      if (curTime < transaction.time) {
-        Thread.sleep((int)((transaction.time - curTime) * 1000));
-      }
-
-      /* does not support arbitrary byte array as key */
-      String keyString = String.valueOf(transaction.keyID);
-
-      byte[] value;
-      String valueString;
-
-      switch (transaction.type) {
-      case GET:
-        String result = db.cacheGet(keyString);
-        if (result == null && transaction.valueSize >= 0) {
-          value = ByteBuffer.allocate(transaction.valueSize).array();
-          valueString = new String(value);
-          db.cacheSet(keyString, valueString);
+      MemcachierTransaction transaction = parseTransaction(line);
+      if (transaction != null) {
+        long curTime = System.nanoTime() - startTime;
+        if (curTime < transaction.time) {
+          long deltaTime = transaction.time - curTime;
+          Thread.sleep(deltaTime / 1000000, (int) (deltaTime % 1000000));
         }
-        if (result != null && transaction.valueSize < 0) {
-          db.cacheDelete(keyString);
-        }
-        break;
-      case SET:
-      case ADD:
-      case INCREMENT:
-        value = ByteBuffer.allocate(transaction.valueSize).array();
-        valueString = new String(value);
-        db.cacheSet(keyString, valueString);
-        break;
-      case DELETE:
-        db.cacheDelete(keyString);
-        break;
-      case STATS:
-        db.cacheStat();
-        break;
-      default:
-        break;
+
+        executeTransaction(db, transaction);
       }
     } catch (Exception e) {
       e.printStackTrace();
     }
-
     return true;
-  }
-
-  @Override
-  public void run() {
-    try {
-      while (true) {
-        if (transactionList.size() <= needPrefetchSize) {
-          for (int i = 0; i < prefetchSize; ++i) {
-            if (scanner.hasNextLine()) {
-              String line = scanner.nextLine();
-              String[] params = line.split(",");
-
-              MemcachierTransaction transaction = new MemcachierTransaction();
-              transaction.time = Float.parseFloat(params[0]) / acceleration;
-              transaction.keySize = (int)Math.min(Long.parseLong(params[3]), Integer.MAX_VALUE);
-              transaction.valueSize = (int)Math.min(Long.parseLong(params[4]), Integer.MAX_VALUE);
-              transaction.keyID = Long.parseLong(params[5]);
-              switch (Integer.parseInt(params[2])) {
-              case 1:
-                transaction.type = MemcachierType.GET;
-                break;
-              case 2:
-                transaction.type = MemcachierType.SET;
-                if (transaction.valueSize < 0) {
-                  continue;
-                }
-                break;
-              case 3:
-                transaction.type = MemcachierType.DELETE;
-                break;
-              case 4:
-                transaction.type = MemcachierType.ADD;
-                if (transaction.valueSize < 0) {
-                  continue;
-                }
-                break;
-              case 5:
-                transaction.type = MemcachierType.INCREMENT;
-                if (transaction.valueSize < 0) {
-                  continue;
-                }
-                break;
-              case 6:
-                transaction.type = MemcachierType.STATS;
-                break;
-              default:
-                transaction.type = MemcachierType.OTHER;
-              }
-              transactionList.add(transaction);
-            } else {
-              return;
-            }
-            Thread.sleep(0, 500);
-          }
-        }
-        if (transactionList.size() > needPrefetchSize) {
-          Thread.sleep(500);
-        }
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
   }
 }
 
