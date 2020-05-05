@@ -34,6 +34,7 @@ public class MemcachierWorkload extends Workload {
   private Scanner scanner;
 
   private int acceleration;
+  private boolean withDeletion;
 
   @Override
   public void init(Properties p) throws WorkloadException {
@@ -45,6 +46,7 @@ public class MemcachierWorkload extends Workload {
       e.printStackTrace();
     }
     acceleration = Integer.parseInt(p.getProperty("acceleration", "1"));
+    withDeletion = Boolean.parseBoolean(p.getProperty("withdeletion", "false"));
 
     startTime = System.nanoTime();
   }
@@ -64,6 +66,7 @@ public class MemcachierWorkload extends Workload {
     transaction.time = (acceleration > 0) ? (long) (1000000000 * (Float.parseFloat(params[0]) / acceleration)) : 0;
     transaction.valueSize = (int) Math.min(Long.parseLong(params[4]), Integer.MAX_VALUE);
     transaction.keyID = Long.parseLong(params[5]);
+    /* only consider GET, SET, DELETE */
     switch (Integer.parseInt(params[2])) {
     case 1:
       transaction.type = MemcachierType.GET;
@@ -91,6 +94,7 @@ public class MemcachierWorkload extends Workload {
     byte[] value;
     String valueString;
 
+    /* only consider GET, SET, DELETE */
     switch (transaction.type) {
     case GET:
       db.cacheGet(keyString);
@@ -102,6 +106,11 @@ public class MemcachierWorkload extends Workload {
       }
       valueString = new String(value);
       db.cacheSet(keyString, valueString);
+      break;
+    case DELETE:
+      if (withDeletion) {
+        db.cacheDelete(keyString);
+      }
       break;
     default:
       break;

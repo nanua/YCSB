@@ -111,6 +111,18 @@ public class RedisClient extends DB {
 
   // XXX jedis.select(int index) to switch to `table`
 
+  public String cacheGet(String key) {
+    return jedis.get(key);
+  }
+
+  public Status cacheSet(String key, String value) {
+    return jedis.set(key, value).equals("OK") ? Status.OK : Status.ERROR;
+  }
+
+  public Status cacheDelete(String key) {
+    return jedis.del(key) == 0 ? Status.ERROR : Status.OK;
+  }
+
   @Override
   public Status read(String table, String key, Set<String> fields,
       Map<String, ByteIterator> result) {
