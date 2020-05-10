@@ -44,6 +44,7 @@ public class RocksDBClient extends DB {
 
   static final String PROPERTY_ROCKSDB_DIR = "rocksdb.dir";
   private static final String COLUMN_FAMILY_NAMES_FILENAME = "CF_NAMES";
+  private static final String CACHE_TABLE_NAME = "CACHE";
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RocksDBClient.class);
 
@@ -55,12 +56,22 @@ public class RocksDBClient extends DB {
   private static final ConcurrentMap<String, ColumnFamily> COLUMN_FAMILIES = new ConcurrentHashMap<>();
   private static final ConcurrentMap<String, Lock> COLUMN_FAMILY_LOCKS = new ConcurrentHashMap<>();
 
+  private String walDir;
+  private String logDir;
+  private boolean directIO;
+
   @Override
   public void init() throws DBException {
     synchronized(RocksDBClient.class) {
       if(rocksDb == null) {
         rocksDbDir = Paths.get(getProperties().getProperty(PROPERTY_ROCKSDB_DIR));
         LOGGER.info("RocksDB data dir: " + rocksDbDir);
+
+        walDir = getProperties().getProperty("rocksdb.wal",
+            getProperties().getProperty(PROPERTY_ROCKSDB_DIR) + "/wal");
+        logDir = getProperties().getProperty("rocksdb.log",
+            getProperties().getProperty(PROPERTY_ROCKSDB_DIR) + "/log");
+        directIO = Boolean.parseBoolean(getProperties().getProperty("rocksdb.direct", "false"));
 
         try {
           rocksDb = initRocksDB();
@@ -109,7 +120,11 @@ public class RocksDBClient extends DB {
           .setCreateMissingColumnFamilies(true)
           .setIncreaseParallelism(rocksThreads)
           .setMaxBackgroundCompactions(rocksThreads)
-          .setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
+          .setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+          .setWalDir(walDir)
+          .setDbLogDir(logDir)
+          .setUseDirectIoForFlushAndCompaction(directIO)
+          .setUseDirectReads(directIO);
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
@@ -118,7 +133,11 @@ public class RocksDBClient extends DB {
           .setCreateMissingColumnFamilies(true)
           .setIncreaseParallelism(rocksThreads)
           .setMaxBackgroundCompactions(rocksThreads)
-          .setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
+          .setInfoLogLevel(InfoLogLevel.INFO_LEVEL)
+          .setWalDir(walDir)
+          .setDbLogDir(logDir)
+          .setUseDirectIoForFlushAndCompaction(directIO)
+          .setUseDirectReads(directIO);
       dbOptions = options;
 
       final List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
@@ -161,6 +180,57 @@ public class RocksDBClient extends DB {
       } finally {
         references--;
       }
+    }
+  }
+
+  public String cacheGet(String key) {
+    try {
+      if (!COLUMN_FAMILIES.containsKey(CACHE_TABLE_NAME)) {
+        createColumnFamily(CACHE_TABLE_NAME);
+      }
+
+      final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
+      final byte[] values = rocksDb.get(cf, key.getBytes(UTF_8));
+      if (values == null) {
+        return null;
+      } else {
+        return new String(values);
+      }
+    } catch(final RocksDBException e) {
+      LOGGER.error(e.getMessage(), e);
+      return null;
+    }
+  }
+
+  public Status cacheSet(String key, String value) {
+    try {
+      if (!COLUMN_FAMILIES.containsKey(CACHE_TABLE_NAME)) {
+        createColumnFamily(CACHE_TABLE_NAME);
+      }
+
+      final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
+      rocksDb.put(cf, key.getBytes(UTF_8), value.getBytes());
+
+      return Status.OK;
+    } catch(final RocksDBException e) {
+      LOGGER.error(e.getMessage(), e);
+      return Status.ERROR;
+    }
+  }
+
+  public Status cacheDelete(String key) {
+    try {
+      if (!COLUMN_FAMILIES.containsKey(CACHE_TABLE_NAME)) {
+        createColumnFamily(CACHE_TABLE_NAME);
+      }
+
+      final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
+      rocksDb.delete(cf, key.getBytes(UTF_8));
+
+      return Status.OK;
+    } catch(final RocksDBException e) {
+      LOGGER.error(e.getMessage(), e);
+      return Status.ERROR;
     }
   }
 

@@ -33,7 +33,7 @@ public class MemcachierWorkload extends Workload {
   private FileInputStream inputStream;
   private Scanner scanner;
 
-  private int acceleration;
+  private float acceleration;
   private boolean withDeletion;
 
   @Override
@@ -45,7 +45,7 @@ public class MemcachierWorkload extends Workload {
       System.err.println("Failed to open the trace");
       e.printStackTrace();
     }
-    acceleration = Integer.parseInt(p.getProperty("acceleration", "1"));
+    acceleration = Float.parseFloat(p.getProperty("acceleration", "1"));
     withDeletion = Boolean.parseBoolean(p.getProperty("withdeletion", "false"));
 
     startTime = System.nanoTime();
