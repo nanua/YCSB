@@ -515,6 +515,10 @@ public class CoreWorkload extends Workload {
         INSERTION_RETRY_LIMIT, INSERTION_RETRY_LIMIT_DEFAULT));
     insertionRetryInterval = Integer.parseInt(p.getProperty(
         INSERTION_RETRY_INTERVAL, INSERTION_RETRY_INTERVAL_DEFAULT));
+
+    startTime = System.nanoTime();
+    emissionCount = 0;
+    emissionInterval = Long.parseLong(p.getProperty("emission.interval", "0"));
   }
 
   protected String buildKeyName(long keynum) {
@@ -629,6 +633,14 @@ public class CoreWorkload extends Workload {
     return null != status && status.isOk();
   }
 
+  private long startTime;
+  private long emissionCount;
+  private long emissionInterval;
+
+  private synchronized long getEmissionTime() {
+    return (emissionCount++) * emissionInterval;
+  }
+
   /**
    * Do one transaction operation. Because it will be called concurrently from multiple client
    * threads, this function must be thread safe. However, avoid synchronized, or the threads will block waiting
@@ -640,6 +652,19 @@ public class CoreWorkload extends Workload {
     String operation = operationchooser.nextString();
     if(operation == null) {
       return false;
+    }
+
+    if (emissionInterval > 0) {
+      try {
+        long emissionTime = getEmissionTime();
+        long curTime = System.nanoTime() - startTime;
+        if (curTime < emissionTime) {
+          long deltaTime = emissionTime - curTime;
+          Thread.sleep(deltaTime / 1000000, (int) (deltaTime % 1000000));
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
     }
 
     switch (operation) {
