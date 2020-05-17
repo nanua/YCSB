@@ -516,7 +516,7 @@ public class CoreWorkload extends Workload {
     insertionRetryInterval = Integer.parseInt(p.getProperty(
         INSERTION_RETRY_INTERVAL, INSERTION_RETRY_INTERVAL_DEFAULT));
 
-    startTime = System.nanoTime();
+    emissionStartTime = System.nanoTime();
     emissionCount = 0;
     emissionInterval = Long.parseLong(p.getProperty("emission.interval", "0"));
   }
@@ -633,7 +633,7 @@ public class CoreWorkload extends Workload {
     return null != status && status.isOk();
   }
 
-  private long startTime;
+  private long emissionStartTime;
   private long emissionCount;
   private long emissionInterval;
 
@@ -657,7 +657,7 @@ public class CoreWorkload extends Workload {
     if (emissionInterval > 0) {
       try {
         long emissionTime = getEmissionTime();
-        long curTime = System.nanoTime() - startTime;
+        long curTime = System.nanoTime() - emissionStartTime;
         if (curTime < emissionTime) {
           long deltaTime = emissionTime - curTime;
           Thread.sleep(deltaTime / 1000000, (int) (deltaTime % 1000000));
