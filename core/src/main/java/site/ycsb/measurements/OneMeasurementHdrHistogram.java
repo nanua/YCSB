@@ -145,9 +145,9 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
     }
   }
 
-  private static void writeLatency(double latency) {
+  private static void writeLatency(double latency, String path) {
     try {
-      RandomAccessFile file = new RandomAccessFile("/tmp/ycsb_latency", "rw");
+      RandomAccessFile file = new RandomAccessFile(path, "rw");
       FileChannel fileChannel = file.getChannel();
       FileLock lock = fileChannel.lock();
       String output = String.format("%f ", latency);
@@ -176,7 +176,8 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
     }
     
     if (getName().equals("CACHE_GET") || getName().equals("READ")) {
-      writeLatency(intervalHistogram.getMean());
+      writeLatency(intervalHistogram.getMean(), "tmp/ycsb_latency");
+      writeLatency(intervalHistogram.getValueAtPercentile(95), "tmp/ycsb_latency_95");
     }
 
     DecimalFormat d = new DecimalFormat("#.##");
