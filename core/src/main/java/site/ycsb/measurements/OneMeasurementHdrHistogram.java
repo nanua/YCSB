@@ -176,8 +176,8 @@ public class OneMeasurementHdrHistogram extends OneMeasurement {
     }
     
     if (getName().equals("CACHE_GET") || getName().equals("READ")) {
-      writeLatency(intervalHistogram.getMean(), "tmp/ycsb_latency");
-      writeLatency(intervalHistogram.getValueAtPercentile(95), "tmp/ycsb_latency_95");
+      writeLatency(intervalHistogram.getMean(), "/tmp/ycsb_latency");
+      writeLatency(intervalHistogram.getValueAtPercentile(95), "/tmp/ycsb_latency_95");
     }
 
     DecimalFormat d = new DecimalFormat("#.##");
