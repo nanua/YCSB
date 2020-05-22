@@ -1,0 +1,6 @@
+recordcount=69897762
+threadcount=32
+workload=site.ycsb.workloads.MemcachierWorkload
+trace=/mnt/vdc1/tmp/warm_up.out
+acceleration=0
+withdeletion=true
