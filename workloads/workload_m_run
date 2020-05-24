@@ -1,7 +1,7 @@
 recordcount=676914873
 operationcount=676914873
-threadcount=32
+threadcount=8
 workload=site.ycsb.workloads.MemcachierWorkload
-trace=/mnt/vdc1/tmp/workload.out
+trace=/data/tmp/workload.out
 acceleration=1
 withdeletion=true
