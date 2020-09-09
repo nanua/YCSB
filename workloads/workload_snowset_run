@@ -1,5 +1,5 @@
 operationcount=126726366
-threadcount=32
+threadcount=2
 workload=site.ycsb.workloads.MemcachierWorkload
 trace=/mnt/vdc1/tmp/snowset-m.out
 acceleration=10
