@@ -1,5 +1,5 @@
 recordcount=1000000
-operationcount=200000000
+operationcount=50000000
 fieldcount=1
 fieldlength=4096
 workload=site.ycsb.workloads.CoreWorkload
