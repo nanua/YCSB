@@ -59,6 +59,8 @@ public class RocksDBClient extends DB {
   private String walDir;
   private String logDir;
   private boolean directIO;
+  private long blockCacheSize;
+  private long compressedBlockCacheSize;
 
   @Override
   public void init() throws DBException {
@@ -72,6 +74,8 @@ public class RocksDBClient extends DB {
         logDir = getProperties().getProperty("rocksdb.log",
             getProperties().getProperty(PROPERTY_ROCKSDB_DIR) + "/log");
         directIO = Boolean.parseBoolean(getProperties().getProperty("rocksdb.direct", "false"));
+        blockCacheSize = Long.parseLong(getProperties().getProperty("rocksdb.blockCacheSize", "8388608"));
+        compressedBlockCacheSize = Long.parseLong(getProperties().getProperty("rocksdb.compressedBlockCacheSize", "0"));
 
         try {
           rocksDb = initRocksDB();
@@ -124,7 +128,11 @@ public class RocksDBClient extends DB {
           .setWalDir(walDir)
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
-          .setUseDirectReads(directIO);
+          .setUseDirectReads(directIO)
+          .setTableFormatConfig(new BlockBasedTableConfig()
+              .setBlockCacheSize(blockCacheSize)
+              .setBlockCacheCompressedSize(compressedBlockCacheSize)
+          );
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
@@ -138,6 +146,7 @@ public class RocksDBClient extends DB {
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
           .setUseDirectReads(directIO);
+      assert blockCacheSize == (8L * 1024L * 1024L) && compressedBlockCacheSize == 0L;
       dbOptions = options;
 
       final List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
