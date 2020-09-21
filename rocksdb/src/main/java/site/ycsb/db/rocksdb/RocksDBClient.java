@@ -61,6 +61,7 @@ public class RocksDBClient extends DB {
   private boolean directIO;
   private long blockCacheSize;
   private long compressedBlockCacheSize;
+  private int maxOpenFiles;
 
   @Override
   public void init() throws DBException {
@@ -76,6 +77,7 @@ public class RocksDBClient extends DB {
         directIO = Boolean.parseBoolean(getProperties().getProperty("rocksdb.direct", "false"));
         blockCacheSize = Long.parseLong(getProperties().getProperty("rocksdb.blockCacheSize", "8388608"));
         compressedBlockCacheSize = Long.parseLong(getProperties().getProperty("rocksdb.compressedBlockCacheSize", "0"));
+        maxOpenFiles = Integer.parseInt(getProperties().getProperty("rocksdb.maxOpenFiles", "256"));
 
         try {
           rocksDb = initRocksDB();
@@ -129,6 +131,7 @@ public class RocksDBClient extends DB {
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
           .setUseDirectReads(directIO)
+          .setMaxOpenFiles(maxOpenFiles)
           .setTableFormatConfig(new BlockBasedTableConfig()
               .setBlockCacheSize(blockCacheSize)
               .setBlockCacheCompressedSize(compressedBlockCacheSize)
@@ -145,7 +148,8 @@ public class RocksDBClient extends DB {
           .setWalDir(walDir)
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
-          .setUseDirectReads(directIO);
+          .setUseDirectReads(directIO)
+          .setMaxOpenFiles(maxOpenFiles);
       assert blockCacheSize == (8L * 1024L * 1024L) && compressedBlockCacheSize == 0L;
       dbOptions = options;
 
