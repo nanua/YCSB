@@ -86,13 +86,21 @@ public class RocksDBClient extends DB {
             while (true) {
               try {
                 final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
-                System.out.printf("block cache: capacity %s, usage %s, pinned usage: %s; " +
+                System.out.printf("cf block cache: capacity %s, usage %s, pinned usage: %s; " +
                         "index: %s; mem-table: %s\n",
                     rocksDb.getProperty(cf, "rocksdb.block-cache-capacity"),
                     rocksDb.getProperty(cf, "rocksdb.block-cache-usage"),
                     rocksDb.getProperty(cf, "rocksdb.block-cache-pinned-usage"),
                     rocksDb.getProperty(cf, "rocksdb.estimate-table-readers-mem"),
                     rocksDb.getProperty(cf, "rocksdb.cur-size-all-mem-tables")
+                );
+                System.out.printf("db block cache: capacity %s, usage %s, pinned usage: %s; " +
+                        "index: %s; mem-table: %s\n",
+                    rocksDb.getProperty("rocksdb.block-cache-capacity"),
+                    rocksDb.getProperty("rocksdb.block-cache-usage"),
+                    rocksDb.getProperty("rocksdb.block-cache-pinned-usage"),
+                    rocksDb.getProperty("rocksdb.estimate-table-readers-mem"),
+                    rocksDb.getProperty("rocksdb.cur-size-all-mem-tables")
                 );
                 Thread.sleep(1000L);
               } catch (Exception e) {
