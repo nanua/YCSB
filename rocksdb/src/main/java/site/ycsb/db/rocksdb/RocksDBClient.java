@@ -85,7 +85,8 @@ public class RocksDBClient extends DB {
           public void run() {
             try {
               while (true) {
-                LOGGER.info(String.format("block cache: capacity %s, usage %s, pinned usage: %s; index: %s; mem-table: %s\n",
+                LOGGER.info(String.format("block cache: capacity %s, usage %s, pinned usage: %s; " +
+                        "index: %s; mem-table: %s\n",
                     rocksDb.getProperty("rocksdb.block-cache-capacity"),
                     rocksDb.getProperty("rocksdb.block-cache-usage"),
                     rocksDb.getProperty("rocksdb.block-cache-pinned-usage"),
