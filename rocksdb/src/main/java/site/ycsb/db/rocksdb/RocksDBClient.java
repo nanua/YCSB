@@ -480,7 +480,11 @@ public class RocksDBClient extends DB {
     l.lock();
     try {
       if(!COLUMN_FAMILIES.containsKey(name)) {
-        final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions();
+        final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
+            .setTableFormatConfig(new BlockBasedTableConfig()
+                .setBlockCache(new LRUCache(blockCacheSize))
+                .setBlockCacheCompressed(new LRUCache(compressedBlockCacheSize))
+            );
         final ColumnFamilyHandle cfHandle = rocksDb.createColumnFamily(
             new ColumnFamilyDescriptor(name.getBytes(UTF_8), cfOptions)
         );
