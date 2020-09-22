@@ -85,14 +85,14 @@ public class RocksDBClient extends DB {
           public void run() {
             try {
               while (true) {
-                LOGGER.info(String.format("block cache: capacity %s, usage %s, pinned usage: %s; " +
-                        "index: %s; mem-table: %s\n",
+                System.out.printf("block cache: capacity %s, usage %s, pinned usage: %s; " +
+                        "index: %s; mem-table: %s",
                     rocksDb.getProperty("rocksdb.block-cache-capacity"),
                     rocksDb.getProperty("rocksdb.block-cache-usage"),
                     rocksDb.getProperty("rocksdb.block-cache-pinned-usage"),
                     rocksDb.getProperty("rocksdb.estimate-table-readers-mem"),
                     rocksDb.getProperty("rocksdb.cur-size-all-mem-tables")
-                ));
+                );
                 Thread.sleep(1000L);
               }
             } catch (RocksDBException | InterruptedException e) {
