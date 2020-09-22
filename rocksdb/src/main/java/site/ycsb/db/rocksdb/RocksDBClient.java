@@ -163,12 +163,7 @@ public class RocksDBClient extends DB {
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
           .setUseDirectReads(directIO)
-          .setMaxOpenFiles(maxOpenFiles)
-          .setTableFormatConfig(
-              new BlockBasedTableConfig()
-                  .setBlockCache(new LRUCache(blockCacheSize))
-                  .setBlockCacheCompressed(new LRUCache(compressedBlockCacheSize))
-          );
+          .setMaxOpenFiles(maxOpenFiles);
       System.out.println("block cache size: " + blockCacheSize);
       System.out.println("compressed block cache size: " + compressedBlockCacheSize);
       dbOptions = options;
@@ -483,7 +478,6 @@ public class RocksDBClient extends DB {
         final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
             .setTableFormatConfig(new BlockBasedTableConfig()
                 .setBlockCacheSize(blockCacheSize)
-                .setBlockCacheCompressedSize(compressedBlockCacheSize)
             );
         final ColumnFamilyHandle cfHandle = rocksDb.createColumnFamily(
             new ColumnFamilyDescriptor(name.getBytes(UTF_8), cfOptions)
