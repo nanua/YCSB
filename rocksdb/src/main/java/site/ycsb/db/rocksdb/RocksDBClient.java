@@ -477,6 +477,7 @@ public class RocksDBClient extends DB {
         final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
             .setTableFormatConfig(new BlockBasedTableConfig()
                 .setBlockCache(new LRUCache(blockCacheSize))
+                .setBlockCacheCompressed(new LRUCache(compressedBlockCacheSize))
             );
         final ColumnFamilyHandle cfHandle = rocksDb.createColumnFamily(
             new ColumnFamilyDescriptor(name.getBytes(UTF_8), cfOptions)
