@@ -62,7 +62,8 @@ public class RocksDBClient extends DB {
   private long blockCacheSize;
   private long compressedBlockCacheSize;
   private int maxOpenFiles;
-  private Statistics statistics;
+
+  private Thread memoryStatThread;
 
   @Override
   public void init() throws DBException {
@@ -79,6 +80,25 @@ public class RocksDBClient extends DB {
         blockCacheSize = Long.parseLong(getProperties().getProperty("rocksdb.blockCacheSize", "8388608"));
         compressedBlockCacheSize = Long.parseLong(getProperties().getProperty("rocksdb.compressedBlockCacheSize", "0"));
         maxOpenFiles = Integer.parseInt(getProperties().getProperty("rocksdb.maxOpenFiles", "256"));
+        memoryStatThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              while (true) {
+                LOGGER.info(String.format("block cache: capacity %s, usage %s, pinned usage: %s; index: %s; mem-table: %s\n",
+                    rocksDb.getProperty("rocksdb.block-cache-capacity"),
+                    rocksDb.getProperty("rocksdb.block-cache-usage"),
+                    rocksDb.getProperty("rocksdb.block-cache-pinned-usage"),
+                    rocksDb.getProperty("rocksdb.estimate-table-readers-mem"),
+                    rocksDb.getProperty("rocksdb.cur-size-all-mem-tables")
+                ));
+                Thread.sleep(1000L);
+              }
+            } catch (RocksDBException | InterruptedException e) {
+              e.printStackTrace();
+            }
+          }
+        });
 
         try {
           rocksDb = initRocksDB();
@@ -121,8 +141,6 @@ public class RocksDBClient extends DB {
     final int rocksThreads = Runtime.getRuntime().availableProcessors() * 2;
 
     if(cfDescriptors.isEmpty()) {
-      statistics = new Statistics();
-
       final Options options = new Options()
           .optimizeLevelStyleCompaction()
           .setCreateIfMissing(true)
@@ -134,14 +152,11 @@ public class RocksDBClient extends DB {
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
           .setUseDirectReads(directIO)
-          .setMaxOpenFiles(maxOpenFiles)
-          .setStatistics(statistics)
-          .setStatsDumpPeriodSec(1);
+          .setMaxOpenFiles(maxOpenFiles);
       dbOptions = options;
+      memoryStatThread.start();
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
-      statistics = new Statistics();
-
       final DBOptions options = new DBOptions()
           .setCreateIfMissing(true)
           .setCreateMissingColumnFamilies(true)
@@ -152,16 +167,14 @@ public class RocksDBClient extends DB {
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
           .setUseDirectReads(directIO)
-          .setMaxOpenFiles(maxOpenFiles)
-          .setStatistics(statistics)
-          .setStatsDumpPeriodSec(1);
+          .setMaxOpenFiles(maxOpenFiles);
       dbOptions = options;
-
       final List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
       final RocksDB db = RocksDB.open(options, rocksDbDir.toAbsolutePath().toString(), cfDescriptors, cfHandles);
       for(int i = 0; i < cfNames.size(); i++) {
         COLUMN_FAMILIES.put(cfNames.get(i), new ColumnFamily(cfHandles.get(i), cfOptionss.get(i)));
       }
+      memoryStatThread.start();
       return db;
     }
   }
