@@ -30,6 +30,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -85,19 +86,17 @@ public class RocksDBClient extends DB {
           public void run() {
             while (true) {
               try {
-                final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
-
                 LOGGER.info(String.format("block cache: capacity %s, usage %s, pinned usage: %s; " +
                         "index: %s; mem-table: %s",
-                    rocksDb.getProperty(cf, "rocksdb.block-cache-capacity"),
-                    rocksDb.getProperty(cf, "rocksdb.block-cache-usage"),
-                    rocksDb.getProperty(cf, "rocksdb.block-cache-pinned-usage"),
-                    rocksDb.getProperty(cf, "rocksdb.estimate-table-readers-mem"),
-                    rocksDb.getProperty(cf, "rocksdb.cur-size-all-mem-tables")
+                    rocksDb.getProperty("rocksdb.block-cache-capacity"),
+                    rocksDb.getProperty("rocksdb.block-cache-usage"),
+                    rocksDb.getProperty("rocksdb.block-cache-pinned-usage"),
+                    rocksDb.getProperty("rocksdb.estimate-table-readers-mem"),
+                    rocksDb.getProperty("rocksdb.cur-size-all-mem-tables")
                 ));
                 Thread.sleep(1000L);
               } catch (Exception e) {
-                // intended to be empty
+                e.printStackTrace();
               }
             }
           }
