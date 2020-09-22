@@ -133,8 +133,8 @@ public class RocksDBClient extends DB {
           .setUseDirectReads(directIO)
           .setMaxOpenFiles(maxOpenFiles)
           .setTableFormatConfig(new BlockBasedTableConfig()
-              .setBlockCacheSize(blockCacheSize)
-              .setBlockCacheCompressedSize(compressedBlockCacheSize)
+              .setBlockCache(new LRUCache(blockCacheSize))
+              .setBlockCacheCompressed(new LRUCache(compressedBlockCacheSize))
           );
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
