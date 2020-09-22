@@ -163,7 +163,14 @@ public class RocksDBClient extends DB {
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
           .setUseDirectReads(directIO)
-          .setMaxOpenFiles(maxOpenFiles);
+          .setMaxOpenFiles(maxOpenFiles)
+          .setTableFormatConfig(
+              new BlockBasedTableConfig()
+                  .setBlockCache(new LRUCache(blockCacheSize))
+                  .setBlockCacheCompressed(new LRUCache(compressedBlockCacheSize))
+          );
+      System.out.println("block cache size: " + blockCacheSize);
+      System.out.println("compressed block cache size: " + compressedBlockCacheSize);
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
@@ -473,13 +480,7 @@ public class RocksDBClient extends DB {
     l.lock();
     try {
       if(!COLUMN_FAMILIES.containsKey(name)) {
-        final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
-            .optimizeLevelStyleCompaction()
-            .setTableFormatConfig(
-                new BlockBasedTableConfig()
-                    .setBlockCache(new LRUCache(blockCacheSize))
-                    .setBlockCacheCompressed(new LRUCache(compressedBlockCacheSize))
-            );
+        final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions();
         final ColumnFamilyHandle cfHandle = rocksDb.createColumnFamily(
             new ColumnFamilyDescriptor(name.getBytes(UTF_8), cfOptions)
         );
