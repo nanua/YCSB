@@ -62,6 +62,7 @@ public class RocksDBClient extends DB {
   private long blockCacheSize;
   private long compressedBlockCacheSize;
   private int maxOpenFiles;
+  private Statistics statistics;
 
   @Override
   public void init() throws DBException {
@@ -120,6 +121,8 @@ public class RocksDBClient extends DB {
     final int rocksThreads = Runtime.getRuntime().availableProcessors() * 2;
 
     if(cfDescriptors.isEmpty()) {
+      statistics = new Statistics();
+
       final Options options = new Options()
           .optimizeLevelStyleCompaction()
           .setCreateIfMissing(true)
@@ -131,10 +134,14 @@ public class RocksDBClient extends DB {
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
           .setUseDirectReads(directIO)
-          .setMaxOpenFiles(maxOpenFiles);
+          .setMaxOpenFiles(maxOpenFiles)
+          .setStatistics(statistics)
+          .setStatsDumpPeriodSec(1);
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
+      statistics = new Statistics();
+
       final DBOptions options = new DBOptions()
           .setCreateIfMissing(true)
           .setCreateMissingColumnFamilies(true)
@@ -145,7 +152,9 @@ public class RocksDBClient extends DB {
           .setDbLogDir(logDir)
           .setUseDirectIoForFlushAndCompaction(directIO)
           .setUseDirectReads(directIO)
-          .setMaxOpenFiles(maxOpenFiles);
+          .setMaxOpenFiles(maxOpenFiles)
+          .setStatistics(statistics)
+          .setStatsDumpPeriodSec(1);
       dbOptions = options;
 
       final List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
