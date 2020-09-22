@@ -103,6 +103,7 @@ public class RocksDBClient extends DB {
 
         try {
           rocksDb = initRocksDB();
+          memoryStatThread.start();
         } catch (final IOException | RocksDBException e) {
           throw new DBException(e);
         }
@@ -155,7 +156,6 @@ public class RocksDBClient extends DB {
           .setUseDirectReads(directIO)
           .setMaxOpenFiles(maxOpenFiles);
       dbOptions = options;
-      memoryStatThread.start();
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
       final DBOptions options = new DBOptions()
@@ -175,7 +175,6 @@ public class RocksDBClient extends DB {
       for(int i = 0; i < cfNames.size(); i++) {
         COLUMN_FAMILIES.put(cfNames.get(i), new ColumnFamily(cfHandles.get(i), cfOptionss.get(i)));
       }
-      memoryStatThread.start();
       return db;
     }
   }
