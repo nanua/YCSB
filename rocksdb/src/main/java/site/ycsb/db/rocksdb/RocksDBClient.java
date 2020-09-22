@@ -112,6 +112,7 @@ public class RocksDBClient extends DB {
 
         try {
           rocksDb = initRocksDB();
+          createColumnFamily(CACHE_TABLE_NAME);
           memoryStatThread.start();
         } catch (final IOException | RocksDBException e) {
           throw new DBException(e);
@@ -164,8 +165,6 @@ public class RocksDBClient extends DB {
           .setUseDirectIoForFlushAndCompaction(directIO)
           .setUseDirectReads(directIO)
           .setMaxOpenFiles(maxOpenFiles);
-      System.out.println("block cache size: " + blockCacheSize);
-      System.out.println("compressed block cache size: " + compressedBlockCacheSize);
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
@@ -478,7 +477,6 @@ public class RocksDBClient extends DB {
         final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
             .setTableFormatConfig(new BlockBasedTableConfig()
                 .setBlockCache(new LRUCache(blockCacheSize))
-                .setNoBlockCache(false)
             );
         final ColumnFamilyHandle cfHandle = rocksDb.createColumnFamily(
             new ColumnFamilyDescriptor(name.getBytes(UTF_8), cfOptions)
