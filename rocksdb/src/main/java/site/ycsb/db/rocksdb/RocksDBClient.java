@@ -83,20 +83,20 @@ public class RocksDBClient extends DB {
         memoryStatThread = new Thread(new Runnable() {
           @Override
           public void run() {
-            try {
-              while (true) {
-                System.out.printf("block cache: capacity %s, usage %s, pinned usage: %s; " +
-                        "index: %s; mem-table: %s",
+            while (true) {
+              try {
+                LOGGER.info(String.format("block cache: capacity %s, usage %s, pinned usage: %s; " +
+                        "index: %s; mem-table: %s\n",
                     rocksDb.getProperty("rocksdb.block-cache-capacity"),
                     rocksDb.getProperty("rocksdb.block-cache-usage"),
                     rocksDb.getProperty("rocksdb.block-cache-pinned-usage"),
                     rocksDb.getProperty("rocksdb.estimate-table-readers-mem"),
                     rocksDb.getProperty("rocksdb.cur-size-all-mem-tables")
-                );
+                ));
                 Thread.sleep(1000L);
+              } catch (Exception e) {
+                e.printStackTrace();
               }
-            } catch (RocksDBException | InterruptedException e) {
-              e.printStackTrace();
             }
           }
         });
