@@ -60,10 +60,7 @@ public class RocksDBClient extends DB {
   private String logDir;
   private boolean directIO;
   private long blockCacheSize;
-  private long compressedBlockCacheSize;
   private int maxOpenFiles;
-
-  private Thread memoryStatThread;
 
   @Override
   public void init() throws DBException {
@@ -78,42 +75,11 @@ public class RocksDBClient extends DB {
             getProperties().getProperty(PROPERTY_ROCKSDB_DIR) + "/log");
         directIO = Boolean.parseBoolean(getProperties().getProperty("rocksdb.direct", "false"));
         blockCacheSize = Long.parseLong(getProperties().getProperty("rocksdb.blockCacheSize", "8388608"));
-        compressedBlockCacheSize = Long.parseLong(getProperties().getProperty("rocksdb.compressedBlockCacheSize", "0"));
         maxOpenFiles = Integer.parseInt(getProperties().getProperty("rocksdb.maxOpenFiles", "256"));
-        memoryStatThread = new Thread(new Runnable() {
-          @Override
-          public void run() {
-            while (true) {
-              try {
-                final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
-                System.out.printf("cf block cache: capacity %s, usage %s, pinned usage: %s; " +
-                        "index: %s; mem-table: %s\n",
-                    rocksDb.getProperty(cf, "rocksdb.block-cache-capacity"),
-                    rocksDb.getProperty(cf, "rocksdb.block-cache-usage"),
-                    rocksDb.getProperty(cf, "rocksdb.block-cache-pinned-usage"),
-                    rocksDb.getProperty(cf, "rocksdb.estimate-table-readers-mem"),
-                    rocksDb.getProperty(cf, "rocksdb.cur-size-all-mem-tables")
-                );
-                System.out.printf("db block cache: capacity %s, usage %s, pinned usage: %s; " +
-                        "index: %s; mem-table: %s\n",
-                    rocksDb.getProperty("rocksdb.block-cache-capacity"),
-                    rocksDb.getProperty("rocksdb.block-cache-usage"),
-                    rocksDb.getProperty("rocksdb.block-cache-pinned-usage"),
-                    rocksDb.getProperty("rocksdb.estimate-table-readers-mem"),
-                    rocksDb.getProperty("rocksdb.cur-size-all-mem-tables")
-                );
-                Thread.sleep(1000L);
-              } catch (Exception e) {
-                e.printStackTrace();
-              }
-            }
-          }
-        });
 
         try {
           rocksDb = initRocksDB();
           createColumnFamily(CACHE_TABLE_NAME);
-          memoryStatThread.start();
         } catch (final IOException | RocksDBException e) {
           throw new DBException(e);
         }
@@ -131,7 +97,8 @@ public class RocksDBClient extends DB {
    * @return The initialized and open RocksDB instance.
    */
   private RocksDB initRocksDB() throws IOException, RocksDBException {
-    if(!Files.exists(rocksDbDir)) {
+    boolean rocksDbDirExists = Files.exists(rocksDbDir);
+    if(!rocksDbDirExists) {
       Files.createDirectories(rocksDbDir);
     }
 
@@ -139,9 +106,16 @@ public class RocksDBClient extends DB {
     final List<ColumnFamilyOptions> cfOptionss = new ArrayList<>();
     final List<ColumnFamilyDescriptor> cfDescriptors = new ArrayList<>();
 
+    if (rocksDbDirExists) {
+      cfNames.add(CACHE_TABLE_NAME);
+    }
+
     for(final String cfName : cfNames) {
       final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
-          .optimizeLevelStyleCompaction();
+          .optimizeLevelStyleCompaction()
+          .setTableFormatConfig(new BlockBasedTableConfig()
+              .setBlockCache(new LRUCache(blockCacheSize))
+          );
       final ColumnFamilyDescriptor cfDescriptor = new ColumnFamilyDescriptor(
           cfName.getBytes(UTF_8),
           cfOptions
@@ -475,9 +449,9 @@ public class RocksDBClient extends DB {
     try {
       if(!COLUMN_FAMILIES.containsKey(name)) {
         final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
+            .optimizeLevelStyleCompaction()
             .setTableFormatConfig(new BlockBasedTableConfig()
                 .setBlockCache(new LRUCache(blockCacheSize))
-                .setBlockCacheCompressed(new LRUCache(compressedBlockCacheSize))
             );
         final ColumnFamilyHandle cfHandle = rocksDb.createColumnFamily(
             new ColumnFamilyDescriptor(name.getBytes(UTF_8), cfOptions)
