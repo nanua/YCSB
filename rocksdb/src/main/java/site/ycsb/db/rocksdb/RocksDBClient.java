@@ -97,18 +97,13 @@ public class RocksDBClient extends DB {
    * @return The initialized and open RocksDB instance.
    */
   private RocksDB initRocksDB() throws IOException, RocksDBException {
-    boolean rocksDbDirExists = Files.exists(rocksDbDir);
-    if(!rocksDbDirExists) {
+    if(!Files.exists(rocksDbDir)) {
       Files.createDirectories(rocksDbDir);
     }
 
     final List<String> cfNames = loadColumnFamilyNames();
     final List<ColumnFamilyOptions> cfOptionss = new ArrayList<>();
     final List<ColumnFamilyDescriptor> cfDescriptors = new ArrayList<>();
-
-    if (rocksDbDirExists) {
-      cfNames.add(CACHE_TABLE_NAME);
-    }
 
     for(final String cfName : cfNames) {
       final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
