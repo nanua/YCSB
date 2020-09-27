@@ -102,4 +102,16 @@ public class DefaultDBFlavor extends DBFlavor {
     }
     return select.toString();
   }
+
+  public String createReplaceStatement(StatementType insertType, String key) {
+    StringBuilder insert = new StringBuilder("REPLACE INTO ");
+    insert.append(insertType.getTableName());
+    insert.append(" (" + JdbcDBClient.PRIMARY_KEY + "," + insertType.getFieldString() + ")");
+    insert.append(" VALUES(?");
+    for (int i = 0; i < insertType.getNumFields(); i++) {
+      insert.append(",?");
+    }
+    insert.append(")");
+    return insert.toString();
+  }
 }

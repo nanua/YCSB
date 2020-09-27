@@ -82,6 +82,8 @@ public class JdbcDBClient extends DB {
   /** The field name prefix in the table. */
   public static final String COLUMN_PREFIX = "FIELD";
 
+  public static final String TABLENAME_PROPERTY_DEFAULT = "usertable";
+
   private boolean sqlserver = false;
   private List<Connection> conns;
   private boolean initialized = false;
@@ -237,6 +239,70 @@ public class JdbcDBClient extends DB {
     initialized = true;
   }
 
+  public String cacheGet(String key) {
+    try {
+      StatementType type = new StatementType(StatementType.Type.READ, TABLENAME_PROPERTY_DEFAULT,
+          1, "", getShardIndexByKey(key));
+      PreparedStatement readStatement = cachedStatements.get(type);
+      if (readStatement == null) {
+        readStatement = createAndCacheReadStatement(type, key);
+      }
+      readStatement.setString(1, key);
+      ResultSet resultSet = readStatement.executeQuery();
+      if (!resultSet.next()) {
+        resultSet.close();
+        return null;
+      }
+      String value = resultSet.getString("FIELD0");
+      resultSet.close();
+      return value;
+    } catch (SQLException e) {
+      System.err.println("Error in processing cacheGet : " + e);
+      return null;
+    }
+  }
+
+  public Status cacheSet(String key, String value) {
+    try {
+      StatementType type = new StatementType(StatementType.Type.REPLACE, TABLENAME_PROPERTY_DEFAULT,
+          2, "YCSB_KEY,FIELD0", getShardIndexByKey(key));
+      PreparedStatement replaceStatement = cachedStatements.get(type);
+      if (replaceStatement == null) {
+        replaceStatement = createAndCacheReplaceStatement(type, key);
+      }
+      replaceStatement.setString(1, key);
+      replaceStatement.setString(2, value);
+      int result = replaceStatement.executeUpdate();
+      if (result == 1) {
+        return Status.OK;
+      }
+      return Status.UNEXPECTED_STATE;
+    } catch (SQLException e) {
+      System.err.println("Error in processing cacheSet: "+ e);
+      return Status.ERROR;
+    }
+  }
+
+  public Status cacheDelete(String key) {
+    try {
+      StatementType type = new StatementType(StatementType.Type.DELETE, TABLENAME_PROPERTY_DEFAULT,
+          1, "", getShardIndexByKey(key));
+      PreparedStatement deleteStatement = cachedStatements.get(type);
+      if (deleteStatement == null) {
+        deleteStatement = createAndCacheDeleteStatement(type, key);
+      }
+      deleteStatement.setString(1, key);
+      int result = deleteStatement.executeUpdate();
+      if (result == 1) {
+        return Status.OK;
+      }
+      return Status.UNEXPECTED_STATE;
+    } catch (SQLException e) {
+      System.err.println("Error in processing cacheDelete: " + e);
+      return Status.ERROR;
+    }
+  }
+
   @Override
   public void cleanup() throws DBException {
     if (batchSize > 0) {
@@ -268,6 +334,17 @@ public class JdbcDBClient extends DB {
     PreparedStatement stmt = cachedStatements.putIfAbsent(insertType, insertStatement);
     if (stmt == null) {
       return insertStatement;
+    }
+    return stmt;
+  }
+
+  private PreparedStatement createAndCacheReplaceStatement(StatementType replaceType, String key)
+      throws SQLException {
+    String replace = dbFlavor.createReplaceStatement(replaceType, key);
+    PreparedStatement replaceStatement = getShardConnectionByKey(key).prepareStatement(replace);
+    PreparedStatement stmt = cachedStatements.putIfAbsent(replaceType, replaceStatement);
+    if (stmt == null) {
+      return replaceStatement;
     }
     return stmt;
   }

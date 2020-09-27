@@ -66,4 +66,11 @@ public abstract class DBFlavor {
    * Create and return a SQL statement for scanning data.
    */
   public abstract String createScanStatement(StatementType scanType, String key, boolean sqlserver);
+
+  /**
+   * Create and return a SQL statement for replacing data.
+   */
+  public String createReplaceStatement(StatementType insertType, String key) {
+    return null;
+  }
 }
