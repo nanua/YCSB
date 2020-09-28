@@ -265,7 +265,7 @@ public class JdbcDBClient extends DB {
   public Status cacheSet(String key, String value) {
     try {
       StatementType type = new StatementType(StatementType.Type.REPLACE, TABLENAME_PROPERTY_DEFAULT,
-          2, "YCSB_KEY,FIELD0", getShardIndexByKey(key));
+          1, "YCSB_KEY,FIELD0", getShardIndexByKey(key));
       PreparedStatement replaceStatement = cachedStatements.get(type);
       if (replaceStatement == null) {
         replaceStatement = createAndCacheReplaceStatement(type, key);
