@@ -273,7 +273,7 @@ public class JdbcDBClient extends DB {
       replaceStatement.setString(1, key);
       replaceStatement.setString(2, value);
       int result = replaceStatement.executeUpdate();
-      if (result == 1) {
+      if (result > 0) {
         return Status.OK;
       }
       return Status.UNEXPECTED_STATE;
