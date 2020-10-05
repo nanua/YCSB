@@ -102,6 +102,7 @@ public class RocksDBClient extends DB {
                     rocksDb.getProperty(cf, "rocksdb.compaction-pending"),
                     rocksDb.getProperty(cf, "rocksdb.num-running-compactions")
                 ));
+                fileWriter.flush();
                 Thread.sleep(1000L);
               }
               fileWriter.close();
