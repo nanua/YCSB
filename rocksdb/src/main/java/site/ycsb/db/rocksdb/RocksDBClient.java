@@ -87,7 +87,11 @@ public class RocksDBClient extends DB {
           @Override
           public void run() {
             try {
-              FileWriter fileWriter = new FileWriter(statPath);
+              File file = new File(statPath);
+              if (!file.exists()) {
+                file.createNewFile();
+              }
+              FileWriter fileWriter = new FileWriter(file);
               fileWriter.write("mem-table-flush-pending,num-running-flushes," +
                   "compaction-pending,num-running-compactions\n");
               final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
