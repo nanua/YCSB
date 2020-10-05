@@ -30,6 +30,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -62,6 +63,10 @@ public class RocksDBClient extends DB {
   private long blockCacheSize;
   private int maxOpenFiles;
 
+  private Thread statThread;
+  private String statPath;
+  private AtomicBoolean statThreadEnable;
+
   @Override
   public void init() throws DBException {
     synchronized(RocksDBClient.class) {
@@ -76,10 +81,39 @@ public class RocksDBClient extends DB {
         directIO = Boolean.parseBoolean(getProperties().getProperty("rocksdb.direct", "false"));
         blockCacheSize = Long.parseLong(getProperties().getProperty("rocksdb.blockCacheSize", "8388608"));
         maxOpenFiles = Integer.parseInt(getProperties().getProperty("rocksdb.maxOpenFiles", "256"));
+        statPath = getProperties().getProperty("rocksdb.statPath", "");
+
+        statThread = new Thread(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              FileWriter fileWriter = new FileWriter(statPath);
+              fileWriter.write("mem-table-flush-pending,num-running-flushes," +
+                  "compaction-pending,num-running-compactions\n");
+              final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
+              while (statThreadEnable.get()) {
+                fileWriter.write(String.format("%s,%s,%s,%s\n",
+                    rocksDb.getProperty(cf, "rocksdb.mem-table-flush-pending"),
+                    rocksDb.getProperty(cf, "rocksdb.num-running-flushes"),
+                    rocksDb.getProperty(cf, "rocksdb.compaction-pending"),
+                    rocksDb.getProperty(cf, "rocksdb.num-running-compactions")
+                ));
+                Thread.sleep(1000L);
+              }
+              fileWriter.close();
+            } catch (Exception e) {
+              e.printStackTrace();
+            }
+          }
+        });
+        statThreadEnable = new AtomicBoolean(true);
 
         try {
           rocksDb = initRocksDB();
           createColumnFamily(CACHE_TABLE_NAME);
+          if (statPath.length() > 0) {
+            statThread.start();
+          }
         } catch (final IOException | RocksDBException e) {
           throw new DBException(e);
         }
@@ -165,6 +199,8 @@ public class RocksDBClient extends DB {
     synchronized (RocksDBClient.class) {
       try {
         if (references == 1) {
+          statThreadEnable.set(false);
+
           for (final ColumnFamily cf : COLUMN_FAMILIES.values()) {
             cf.getHandle().close();
           }
