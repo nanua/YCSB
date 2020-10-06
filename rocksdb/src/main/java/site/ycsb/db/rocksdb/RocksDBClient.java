@@ -62,10 +62,10 @@ public class RocksDBClient extends DB {
   private boolean directIO;
   private long blockCacheSize;
   private int maxOpenFiles;
-
-  private Thread statThread;
   private String statPath;
-  private AtomicBoolean statThreadEnable;
+
+  private static Thread statThread;
+  private static AtomicBoolean statThreadEnable;
 
   @Override
   public void init() throws DBException {
