@@ -496,6 +496,16 @@ public class CoreWorkload extends Workload {
           Double.parseDouble(p.getProperty(HOTSPOT_OPN_FRACTION, HOTSPOT_OPN_FRACTION_DEFAULT));
       keychooser = new HotspotIntegerGenerator(insertstart, insertstart + insertcount - 1,
           hotsetfraction, hotopnfraction);
+    } else if (requestdistrib.compareTo("unscrambled_zipfian") == 0) {
+      final double insertproportion = Double.parseDouble(
+          p.getProperty(INSERT_PROPORTION_PROPERTY, INSERT_PROPORTION_PROPERTY_DEFAULT));
+      int opcount = Integer.parseInt(p.getProperty(Client.OPERATION_COUNT_PROPERTY));
+      int expectednewkeys = (int) ((opcount) * insertproportion * 2.0); // 2 is fudge factor
+      double zipfianconstant = Double.parseDouble(
+          p.getProperty("zipfian.constant", "0.99"));
+
+      keychooser = new ZipfianGenerator(insertstart, insertstart + insertcount + expectednewkeys,
+          zipfianconstant);
     } else {
       throw new WorkloadException("Unknown request distribution \"" + requestdistrib + "\"");
     }
