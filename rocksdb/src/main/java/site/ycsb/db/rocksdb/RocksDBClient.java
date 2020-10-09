@@ -92,16 +92,12 @@ public class RocksDBClient extends DB {
                 file.createNewFile();
               }
               FileWriter fileWriter = new FileWriter(file);
-              fileWriter.write("mem-table-flush-pending,num-running-flushes," +
-                  "compaction-pending,num-running-compactions\n");
               final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
               while (statThreadEnable.get()) {
-                fileWriter.write(String.format("%s,%s,%s,%s\n",
-                    rocksDb.getProperty(cf, "rocksdb.mem-table-flush-pending"),
-                    rocksDb.getProperty(cf, "rocksdb.num-running-flushes"),
-                    rocksDb.getProperty(cf, "rocksdb.compaction-pending"),
-                    rocksDb.getProperty(cf, "rocksdb.num-running-compactions")
-                ));
+                fileWriter.write(rocksDb.getProperty(cf, "rocksdb.stats") + "\n");
+                fileWriter.write(rocksDb.getProperty(cf, "rocksdb.levelstats") + "\n");
+                fileWriter.write(String.format("rocksdb.estimate-pending-compaction-bytes: %s\n",
+                    rocksDb.getProperty(cf, "rocksdb.estimate-pending-compaction-bytes")));
                 fileWriter.flush();
                 Thread.sleep(1000L);
               }
