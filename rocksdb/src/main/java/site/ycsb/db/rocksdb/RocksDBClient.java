@@ -45,7 +45,7 @@ public class RocksDBClient extends DB {
 
   static final String PROPERTY_ROCKSDB_DIR = "rocksdb.dir";
   private static final String COLUMN_FAMILY_NAMES_FILENAME = "CF_NAMES";
-  private static final String CACHE_TABLE_NAME = "CACHE";
+  private static final String CACHE_TABLE_NAME = "usertable";
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RocksDBClient.class);
 
