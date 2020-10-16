@@ -94,7 +94,7 @@ public class RocksDBClient extends DB {
               FileWriter fileWriter = new FileWriter(file);
               final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(CACHE_TABLE_NAME).getHandle();
               while (statThreadEnable.get()) {
-                fileWriter.write(rocksDb.getProperty(cf, "rocksdb.stats") + "\n");
+                fileWriter.write(rocksDb.getProperty("rocksdb.stats") + "\n");
                 fileWriter.write(rocksDb.getProperty(cf, "rocksdb.levelstats") + "\n");
                 fileWriter.write(String.format("rocksdb.estimate-pending-compaction-bytes: %s\n",
                     rocksDb.getProperty(cf, "rocksdb.estimate-pending-compaction-bytes")));
