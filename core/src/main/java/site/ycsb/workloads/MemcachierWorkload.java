@@ -34,6 +34,7 @@ public class MemcachierWorkload extends Workload {
   private Scanner scanner;
 
   private float acceleration;
+  private float inflation;
   private boolean withDeletion;
 
   @Override
@@ -46,6 +47,7 @@ public class MemcachierWorkload extends Workload {
       e.printStackTrace();
     }
     acceleration = Float.parseFloat(p.getProperty("acceleration", "1"));
+    inflation = Float.parseFloat(p.getProperty("inflation", "1"));
     withDeletion = Boolean.parseBoolean(p.getProperty("withdeletion", "false"));
 
     startTime = System.nanoTime();
@@ -65,6 +67,7 @@ public class MemcachierWorkload extends Workload {
     MemcachierTransaction transaction = new MemcachierTransaction();
     transaction.time = (acceleration > 0) ? (long) (1000000000 * (Float.parseFloat(params[0]) / acceleration)) : 0;
     transaction.valueSize = (int) Math.min(Long.parseLong(params[4]), Integer.MAX_VALUE);
+    transaction.valueSize = (int) (transaction.valueSize * inflation);
     transaction.keyID = Long.parseLong(params[5]);
     /* only consider GET, SET, DELETE */
     switch (Integer.parseInt(params[2])) {
