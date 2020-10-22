@@ -25,7 +25,7 @@ public class MemcachierWorkload extends Workload {
     private long time;
     private MemcachierType type;
     private int valueSize;
-    private long keyID;
+    private String key;
   }
 
   private long startTime;
@@ -68,7 +68,7 @@ public class MemcachierWorkload extends Workload {
     transaction.time = (acceleration > 0) ? (long) (1000000000 * (Float.parseFloat(params[0]) / acceleration)) : 0;
     transaction.valueSize = (int) Math.min(Long.parseLong(params[4]), Integer.MAX_VALUE);
     transaction.valueSize = (int) (transaction.valueSize * inflation);
-    transaction.keyID = Long.parseLong(params[5]);
+    transaction.key = params[1] + "," + params[5];
     /* only consider GET, SET, DELETE */
     switch (Integer.parseInt(params[2])) {
     case 1:
@@ -92,15 +92,13 @@ public class MemcachierWorkload extends Workload {
   }
 
   private void executeTransaction(DB db, MemcachierTransaction transaction) {
-    String keyString = String.valueOf(transaction.keyID);
-
     byte[] value;
     String valueString;
 
     /* only consider GET, SET, DELETE */
     switch (transaction.type) {
     case GET:
-      db.cacheGet(keyString);
+      db.cacheGet(transaction.key);
       break;
     case SET:
       value = ByteBuffer.allocate(transaction.valueSize).array();
@@ -108,11 +106,11 @@ public class MemcachierWorkload extends Workload {
         value[i] = (byte)((int)(ThreadLocalRandom.current().nextFloat() * 91) + ' ');
       }
       valueString = new String(value);
-      db.cacheSet(keyString, valueString);
+      db.cacheSet(transaction.key, valueString);
       break;
     case DELETE:
       if (withDeletion) {
-        db.cacheDelete(keyString);
+        db.cacheDelete(transaction.key);
       }
       break;
     default:
