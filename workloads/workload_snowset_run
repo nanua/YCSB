@@ -3,3 +3,4 @@ threadcount=8
 workload=site.ycsb.workloads.MemcachierWorkload
 trace=/mnt/vdc1/tmp/snowset-m.out
 acceleration=10
+inflation=25
